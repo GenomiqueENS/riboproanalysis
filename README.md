@@ -20,7 +20,7 @@ bowtie-build rRNA.fasta rRNA
 ```
 * Build STAR index for reference genome
 ```
-STAR --runMode genomeGenerate --genomeDir /path/to/genome/index --genomeFastaFiles /path/to/genome/fasta1 /path/to/genome/fasta2 ... --sjdbGTFFile /path/to/gtf/annotations \
+STAR --runMode genomeGenerate --genomeDir /path/to/genome/index --genomeFastaFiles /path/to/genome/fasta1 /path/to/genome/fasta2 ... --sjdbGTFfile /path/to/gtf/annotations \
 --sjdbOverhang 28
 ```
 
@@ -102,7 +102,7 @@ You should :
 	* genomicpariscentre/fastqc
 	* genomicpariscentre/cutadapt
 	* genomicpariscentre/bowtie1
-	* genomicpariscentre/star
+	* genomicpariscentre/star:2.4.0k
 	* genomicpariscentre/gff3-ptools
 	* genomicpariscentre/samtools
 	* genomicpariscentre/htseq
