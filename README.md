@@ -37,7 +37,7 @@ riboproanalysis.sh MyConfigurationFile.conf
 
 ### Available variables to set in the configuration file
 
-| Variables                                   | Explication                                          | Choices/Examples                    | Default                | 
+| Variables                                   | Explanation                                          | Choices/Examples                    | Default                | 
 |---------------------------------------------|------------------------------------------------------|-------------------------------------|------------------------| 
 | PATH_TO_GENOME_INDEX                        | "Absolute path to genome index                       |                                     |                        | 
 | Previously built with STAR"                 | /absolute/path/to/genome/index/                      | "Mandatory (if not                  |                        | 
