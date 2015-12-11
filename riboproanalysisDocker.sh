@@ -350,10 +350,10 @@ ThreePrime_trimming()
                         else
                                 THREEPRIME_TRIM_INPUT="$1_rmIQF.fastq"
                         fi
-
-                        THREEPRIME_TRIM_OUTPUT="$1_ThreePrime_Trim.fastq"
-			LOGFILE="$1_ThreePrimeTrim.log"
 		fi
+
+		THREEPRIME_TRIM_OUTPUT="$1_ThreePrime_Trim.fastq"
+		LOGFILE="$1_ThreePrimeTrim.log"
 
 		if [ -s $THREEPRIME_TRIM_OUTPUT ] && [ -s $LOGFILE ]
 		then
