@@ -2,7 +2,7 @@ RiboProAnalysis
 ===============
 
 **RiboProAnalysis** is a pipeline for Ribosome Profiling analysis for all eukaryotic genome from Ensembl. 
-It performs pre-processing steps (quality control, filtering, trimming and siez selection), reads mapping to rRNA and reference genome, counting on CDS for each gene and
+It performs pre-processing steps (quality control, filtering, trimming and size selection), reads mapping to rRNA and reference genome, counting on CDS for each gene and
 differential analysis from raw Ribosome Profiling data.
 
 ##Use :
