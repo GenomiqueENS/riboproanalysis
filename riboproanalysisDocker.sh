@@ -856,10 +856,10 @@ build_rnaseq_ribopro_counting_tables()
 		if [ $WORKING_ANSWER_RNASEQ_COUNTING = YES ]
 		then
 
-			docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RNASEQ}" ${SAMPLES[@]}
+			docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/babel:0.3-0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RNASEQ}" ${SAMPLES[@]}
 			chown -R $USER_IDS $WORKDIR_ANADIFF
 
-			docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RP}" ${SAMPLES[@]}
+			docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/babel:0.3-0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RP}" ${SAMPLES[@]}
 			chown -R $USER_IDS $WORKDIR_ANADIFF
 		else
 			return
@@ -875,10 +875,10 @@ anadif_babel()
 		# If user has RNA-seq counting, we use Babel R package
 		if [ $WORKING_ANSWER_RNASEQ_COUNTING = YES ]
 		then
-			docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_BABEL}" ${CONDITION_ARRAY[@]}
+			docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/babel:0.3-0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_BABEL}" ${CONDITION_ARRAY[@]}
 			chown -R $USER_IDS $WORKDIR_ANADIFF
 
-			docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_PERMT_TEST_BABEL}" ${CONDITION_ARRAY[@]}
+			docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/babel:0.3-0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_PERMT_TEST_BABEL}" ${CONDITION_ARRAY[@]}
 			chown -R $USER_IDS $WORKDIR_ANADIFF
 		else
 			return
@@ -905,10 +905,10 @@ anadif_sartools()
 			# EdgeR is launch by default if not specified (because Babel uses edgeR)
 			if [ $WORKING_DIFFERENTIAL_ANALYSIS_PACKAGE = DESEQ2 ]
 			then
-				docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/sartools:1.1.0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_DESEQ2}" $PARAMETERS
+				docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/sartools:1.3.2 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_DESEQ2}" $PARAMETERS
 				chown -R $USER_IDS $WORKDIR_ANADIFF
 			else
-				docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/sartools:1.1.0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_EDGER}" $PARAMETERS
+				docker run --rm --volumes-from ribopro -w $WORKDIR_ANADIFF genomicpariscentre/sartools:1.3.2 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_EDGER}" $PARAMETERS
 				chown -R $USER_IDS $WORKDIR_ANADIFF
 			fi
 		else

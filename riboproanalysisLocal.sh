@@ -818,9 +818,9 @@ build_rnaseq_ribopro_counting_tables()
 		# If user has RNA-seq countings, we build RNAseq and Ribosome Profiling counting tables
 		if [ $WORKING_ANSWER_RNASEQ_COUNTING = YES ]
 		then
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RNASEQ}" ${SAMPLES[@]}
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.3-0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RNASEQ}" ${SAMPLES[@]}
 
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RP}" ${SAMPLES[@]}
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.3-0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RP}" ${SAMPLES[@]}
 		else
 			return
 		fi
@@ -835,9 +835,9 @@ anadif_babel()
 		# If user has RNA-seq counting, we use Babel R package
 		if [ $WORKING_ANSWER_RNASEQ_COUNTING = YES ]
 		then
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_BABEL}" ${CONDITION_ARRAY[@]}
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.3-0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_BABEL}" ${CONDITION_ARRAY[@]}
 
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_PERMT_TEST_BABEL}" ${CONDITION_ARRAY[@]}
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.3-0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_PERMT_TEST_BABEL}" ${CONDITION_ARRAY[@]}
 		else
 			return
 		fi
@@ -863,9 +863,9 @@ anadif_sartools()
 			# EdgeR is launch by default if not specified (because Babel uses edgeR)
 			if [ $WORKING_DIFFERENTIAL_ANALYSIS_PACKAGE = DESEQ2 ]
 			then
-				docker run --rm -u $(id -u):$(id -g) -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/sartools:1.1.0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_DESEQ2}" $PARAMETERS
+				docker run --rm -u $(id -u):$(id -g) -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/sartools:1.3.2 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_DESEQ2}" $PARAMETERS
 			else
-				docker run --rm -u $(id -u):$(id -g) -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/sartools:1.1.0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_EDGER}" $PARAMETERS
+				docker run --rm -u $(id -u):$(id -g) -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/sartools:1.3.2 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_EDGER}" $PARAMETERS
 			fi
 		else
 			return
