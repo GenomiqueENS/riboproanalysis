@@ -176,6 +176,10 @@ data.rna <- read.table("mRNAmainMatrix_permutationTest.txt", row.names = 1, stri
 data.rp <- read.table("RPmainMatrix_permutationTest.txt", row.names = 1, stringsAsFactors = F, header = T)
 
 data.rna <- data.rna[rownames(data.rp),]
+data.rp <- data.rp[rownames(data.rna),]
+
+data.rna[is.na(data.rna)] <- 0
+data.rp[is.na(data.rp)] <- 0
 
 CondSample.df <- data.frame(sample = Samples, Condition = groups, stringsAsFactors = F)
 coLors <- buildColorVector(CondSample.df)
@@ -192,11 +196,13 @@ for (i in 1:length(experiments))
 
 		group.factor <- factor(groups)
 
-		y <- DGEList(counts = x, group = group.factor)
-		y <- calcNormFactors(y)
-		y <- estimateCommonDisp(y, verbose = T)
+		libSize <- colSums(x, na.rm = T)
 
-		normalized.counts.table <- y$pseudo.counts
+		x[is.na(x)] <- 0
+
+		y <- DGEList(counts = x, group = group.factor)
+		
+		normalized.counts.table <- cpm(y, normalized.lib.sizes = FALSE)
 
 		normalized.counts.table.name <- paste(experiments[i], "_normalized_count_table_PermutTest.txt", sep = "")
 
@@ -328,32 +334,30 @@ nbPossible.permutations <- factorial(length(Conds))
 ## Retrive the reciprocity of comparisons
 nbCombinaisons.to.compare <- nbPossible.permutations/2
 
-## For each conditions comparison : 1) Writting a matrix from "Between" Babel analysis. 2) Writting a matrix with significant genes (FDR < 25%)
+## For each conditions comparison : 1) Writting a matrix from "Between" Babel analysis. 2) Writting a matrix with significant genes (FDR < 5%)
 ## 3) Histograms : - distribution of p-values for all genes. - distribution of p-values for significant genes.
 for (i in 1:nbCombinaisons.to.compare)
 	{                              
 		write.table(between.babel[[i]], paste("Between_Babel_Analysis_Matrix_PermutTest", names(between.babel)[i], ".txt", sep = "") , sep = "\t", na = " ", row.names = F, col.names = T)
 		
-		which.25.fdr <- which(between.babel[[i]]$"FDR" < 0.25)
-		write.table(between.babel[[i]][which.25.fdr,], paste("SignificantGenesIn_", names(between.babel)[i], "_PermutTest_Comparison.txt", sep = ""), sep = "\t", na = "", row.names = F, col.names = T, quote = F)
+		which.low.fdr <- which(between.babel[[i]]$"FDR" < 0.05)
+		write.table(between.babel[[i]][which.low.fdr,], paste("SignificantGenesIn_", names(between.babel)[i], "_PermutTest_Comparison.txt", sep = ""), sep = "\t", na = "", row.names = F, col.names = T, quote = F)
 
 		png(paste("P-valuesDistributionOf_", names(between.babel)[i], "_Comparison_PermutTest.png", sep = ""), width = 600, height = 600)
-#			raw.pvalues <- between.babel[[i]]$"P-value"
-#			hist(raw.pvalues, main = paste("Distribution of p-values for all genes in", i, " comparison", sep = ""), xlab = "P-value", col = 'deepskyblue4', axes = F)
-#			axis(2)
-#			axis(1, at = seq(0,1, by = 0.01), labels = seq(0,1, by = 0.01))
-
 			raw.pvalues <- between.babel[[i]]$"P-value"
-                        hist(raw.pvalues, main = paste("Distribution of p-values for all genes in ", names(between.babel)[i], " comparison from Permutation Test", sep = ""), xlab = "P-value", ylab = "Frequency", col = 'deepskyblue4', freq = T)
+                        res <- try(hist(raw.pvalues, main = paste("Distribution of p-values for all genes in ", names(between.babel)[i], " comparison from Permutation Test", sep = ""), xlab = "P-value", ylab = "Frequency", col = 'deepskyblue4', freq = T), silent = T)
+			if (class(res) == "try-error")
+				{
+					print(paste("Impossible to draw P-valuesDistributionOf_", names(between.babel)[i], "_Comparison_PermutTest.png", sep = ""))
+				}
 		dev.off()
 
 		png(paste("P-valuesDistributionOf_", names(between.babel)[i], "_ComparisonSignificantGenes_PermutTest.png", sep = ""), width = 600, height = 600)
-#			selected.pvalues <- between.babel[[i]][which.25.fdr,]$"P-value"
-#                       hist(selected.pvalues, main = paste("Distribution of p-values for significant genes in", i, " comparison", sep = ""), xlab = "P-value", col = 'chocolate1', axes = F)
-#			axis(2)
-#                       axis(1, at = seq(0,1, by = 0.001), labels = seq(0,1, by = 0.001))
-	
-			selected.pvalues <- between.babel[[i]][which.25.fdr,]$"P-value"
-                        hist(selected.pvalues, main = paste("Distribution of p-values for significant genes in ", names(between.babel)[i], " comparison from Permute Test", sep = ""), xlab = "P-value", ylab = "Frequency", col = 'chocolate1', freq = T)
+			selected.pvalues <- between.babel[[i]][which.low.fdr,]$"P-value"
+                        res <- try(hist(selected.pvalues, main = paste("Distribution of p-values for significant genes in ", names(between.babel)[i], " comparison from Permute Test", sep = ""), xlab = "P-value", ylab = "Frequency", col = 'chocolate1', freq = T), silent = T)
+			if (class(res) == "try-error")
+				{
+					print(paste("Impossible to draw P-valuesDistributionOf_", names(between.babel)[i], "_ComparisonSignificantGenes_PermutTest.png", sep = ""))
+				}
                 dev.off()
 	}

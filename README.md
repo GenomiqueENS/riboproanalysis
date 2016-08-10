@@ -39,41 +39,26 @@ riboproanalysis.sh MyConfigurationFile.conf
 
 ### Available variables to set in the configuration file
 
-| Variables                         | Explanation                                                                              | Choices/Examples                                                     | Default                            |                                           | 
-|-----------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------------------------|------------------------------------|-------------------------------------------| 
-| PATH_TO_GENOME_INDEX              | Absolute path to genome index previously built with STAR                                 | /absolute/path/to/genome/index/                                      | Mandatory (if not Docker mode)     |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| PATH_TO_rRNA_INDEX                | Absolute path to rRNA index previously built with Bowtie1                                | /absolute/path/to/rRNA/index                                         | Mandatory (if not Docker mode)     |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| PATH_TO_ANNOTATION_FILE           | Absolute path to GTF annotations file (Ensembl 75)                                       | /absolute/path/to/gtf/annotations                                    | Mandatory                          |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| USER_IDS                          | Result of the bash command : $(id -u):$(id -g)                                           | UserId:GroupId                                                       | Mandatory (if Docker mode)         |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| SAMPLE_ARRAY                      | Array containing sample names (if demultiplexing) or FASTQ file for each sample          | (Sample1 Sample 2 Sample 3) OR (Samp1.fastq Samp2.fastq Samp3.fastq) | Mandatory                          |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| ADAPTER_SEQUENCE_THREE_PRIME      | Adapter sequence for 3' trimming                                                         | AAAAAAAGGTCCTAA                                                      | Mandatory                          |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| STRANDED                          | Answer for stranded option of HTSeq-Count                                                | yes/no/reverse                                                       | Mandatory                          |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-|  PATH_TO_RAW_UNDEMULTIPLEXED_FILE | Absolute path to multiplexed FASTQ file                                                  | /absolute/path/to/multiplexed/fastq                                  | Mandatory for demultiplexing       |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| SAMPLE_INDEX_ARRAY                | Array containing 5' index used for demultiplexing. Respect same order as in SAMPLE_ARRAY |  so index match with respective sample name                          | (IndexSamp1 IndexSamp2 IndexSamp3) | Mandatory for demultiplexing. Never empty | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| ANSWER_DEMULTIPLEXING             | Option to launch demultiplexing step                                                     | YES / NO                                                             | NO                                 |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| ANSWER_REMOVE_PCR_DUPLICATES      | Option to launch PCR duplicates removing                                                 | YES / NO                                                             | NO                                 |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| ANSWER_RNASEQ_COUNTING            | Option to launch Babel OR SARTools for differential analysis                             | YES / NO                                                             | NO                                 |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| ANSWER_KEEP_MULTIREAD             | Option to keep multi-reads in a distinct SAM file                                        | YES / NO                                                             | NO                                 |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| DIFFERENTIAL_ANALYSIS_PACKAGE     | Choice of the R package launched by SARTools                                             | DESEQ2 / EDGER                                                       | EDGER                              |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| CONDITION_ARRAY                   | Array containig condition name of each sample respecting the same order                  | (Cond_Samp1 Cond_Samp2 Cond_Samp3)                                   | Mandatory with Babel               |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| AUTHOR                            | Author's name                                                                            | UserName                                                             | Mandatory for SARTools             |                                           | 
-|                                   |                                                                                          |                                                                      |                                    |                                           | 
-| REFERENCE_CONDITION               | Reference condition for the statistical analysis of SARTools                             | WT                                                                   | Mandatory for SARTools             |                                           | 
+| Variables                          | Explanation                                                                                                                           | Choices/Examples                                                     | Default                                   |
+|------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|-------------------------------------------|
+| PATH_TO_GENOME_INDEX               | Absolute path to genome index previously built with STAR                                                                              | /absolute/path/to/genome/index/                                      | Mandatory (if not Docker mode)            |
+| PATH_TO_rRNA_INDEX                 | Absolute path to rRNA index previously built with Bowtie1                                                                             | /absolute/path/to/rRNA/index                                         | Mandatory (if not Docker mode)            |
+| PATH_TO_ANNOTATION_FILE            | Absolute path to GTF annotations file (Ensembl 75)                                                                                    | /absolute/path/to/gtf/annotations                                    | Mandatory                                 |
+| USER_IDS                           | Result of the bash command : $(id -u):$(id -g)                                                                                        | UserId:GroupId                                                       | Mandatory (if Docker mode)                |
+| SAMPLE_ARRAY                       | Array containing sample names (if demultiplexing) or FASTQ file for each sample                                                       | (Sample1 Sample 2 Sample 3) OR (Samp1.fastq Samp2.fastq Samp3.fastq) | Mandatory                                 |
+| ADAPTER_SEQUENCE_THREE_PRIME       | Adapter sequence for 3' trimming                                                                                                      | AAAAAAAGGTCCTAA                                                      | Mandatory                                 |
+| STRANDED                           | Answer for stranded option of HTSeq-Count                                                                                             | yes/no/reverse                                                       | Mandatory                                 |
+| PATH_TO_RAW_UNDEMULTIPLEXED_FILE   | Absolute path to multiplexed FASTQ file                                                                                               | /absolute/path/to/multiplexed/fastq                                  | Mandatory for demultiplexing              |
+| SAMPLE_INDEX_ARRAY                 | Array containing 5' index used for demultiplexing. Respect same order as in SAMPLE_ARRAY so index match with respective sample name   | (IndexSamp1 IndexSamp2 IndexSamp3)                                   | Mandatory for demultiplexing. Never empty |
+| ANSWER_REMOVE_POLYN_READS          | Option to remove reads containing more than 2 N bases (cutadapt –max-n 2)                                                             | YES / NO                                                             | NO                                        |
+| ANSWER_DEMULTIPLEXING              | Option to launch demultiplexing step                                                                                                  | YES / NO                                                             | NO                                        |
+| ANSWER_REMOVE_PCR_DUPLICATES       | Option to launch PCR duplicates removing                                                                                              | YES / NO                                                             | NO                                        |
+| ANSWER_RNASEQ_COUNTING             | Option to launch Babel OR SARTools for differential analysis                                                                          | YES / NO                                                             | NO                                        |
+| ANSWER_KEEP_MULTIREAD              | Option to keep multi-reads in a distinct SAM file                                                                                     | YES / NO                                                             | NO                                        |
+| DIFFERENTIAL_ANALYSIS_PACKAGE      | Choice of the R package launched by SARTools                                                                                          | DESEQ2 / EDGER                                                       | EDGER                                     |
+| CONDITION_ARRAY                    | Array containig condition name of each sample respecting the same order                                                               | (Cond_Samp1 Cond_Samp2 Cond_Samp3)                                   | Mandatory with Babel                      |
+| AUTHOR                             | Author's name                                                                                                                         | UserName                                                             | Mandatory for SARTools                    |
+| REFERENCE_CONDITION                | Reference condition for the statistical analysis of SARTools                                                                          | WT                                                                   | Mandatory for SARTools                    |
 
 
 ##Installation :
@@ -82,15 +67,15 @@ This software could be launched from a Docker container launcheing Docker contai
 You should :
 * Install Docker on your computer
 * Pull following docker images from the Genomic Paris Centre Docker public repository : 
-	* genomicpariscentre/fastqc
-	* genomicpariscentre/cutadapt
-	* genomicpariscentre/bowtie1
-	* genomicpariscentre/star:2.4.0k
-	* genomicpariscentre/gff3-ptools
-	* genomicpariscentre/samtools
-	* genomicpariscentre/htseq
-	* genomicpariscentre/babel
-	* genomicpariscentre/sartools
+	* genomicpariscentre/fastqc:0.11.3
+	* genomicpariscentre/cutadapt:1.8.3
+	* genomicpariscentre/bowtie1:1.1.1
+	* genomicpariscentre/star:2.5.1b
+	* genomicpariscentre/gff3-ptools:0.4.0
+	* genomicpariscentre/samtools:0.1.19
+	* genomicpariscentre/htseq:0.6.1p1
+	* genomicpariscentre/babel:0.2-6
+	* genomicpariscentre/sartools:1.1.0
 
 * Pull RiboProAnalysis image
 

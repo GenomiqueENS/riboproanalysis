@@ -4,8 +4,9 @@
 ## 								       ##
 ## This script runs all steps of a Ribosome Profiling analysis         ##
 ##								       ##
-## Version 1.0.0						       ##
-## Maintener : Alexandra Bomane <bomane@biologie.ens.fr>	       ##
+## Version 1.0.2						       ##
+## Maintener : Alexandra Bomane					       ##
+##	       <alexandra.bomane@univ-paris-diderot.fr>	       	       ##
 ##								       ##
 #########################################################################
 
@@ -22,7 +23,7 @@ source $1
 
 if [ ! -e tmp/ ]
 then
-        mkdir -p tmp/
+	mkdir -p tmp/
 fi
 
 export TMPDIR=$(readlink -f tmp/)
@@ -38,6 +39,7 @@ CANONICAL_PATH=$(dirname $MAIN_SCRIPT_CANONICAL_PATH)
 export PYTHON_SCRIPTS_PATH="${CANONICAL_PATH}/PythonScripts"
 export R_SCRIPTS_PATH="${CANONICAL_PATH}/RScripts"
 
+# Python scripts
 export PYTHON_SCRIPT_DEMULTIPLEXING="run_demultiplexing.py"
 export PYTHON_SCRIPT_REMOVE_PCR_DUP="rmDupPCR.py"
 export PYTHON_SCRIPT_REMOVE_BAD_IQF="remove_bad_reads_Illumina_passing_filter.py"
@@ -71,16 +73,25 @@ export PROJECT_NAME=$(basename $1 .conf)
 
 ### Tools parameters
 
-
 	## 3' trimming : Cutadapt
 
 export MIN_READ_LENGTH="25"
+export MAX_READ_LENGTH="45"
+export FILTER_MAX_N="2"
 
 	## Align to rRNA sequences : Bowtie 1
 
+# Bowtie 1 Options details : -q --> Fastq file as input ; --un --> write unaligned reads to another file (.fastq) ; -S --> write hits in SAM format
 export BOWTIE_OPTIONS="-q -S --un"
 
-		# Bowtie 1 Options details : -q --> Fastq file as input ; --un --> write unaligned reads to another file (.fastq) ; -S --> write hits in SAM format
+	## Align to reference genome : STAR
+
+export MAX_ALLOWED_MISMATCHES="0.06"	# alignment will be output only if its ratio of mismatches to *mapped* length is less than this value
+export SEED_SEARCH_POINT="16"	# defines the search start point through the read - the read is split into pieces no longer than this value
+export FILTER_SCORE_MIN="0"	# alignment will be output if its ratio of score to *read* length is higher than this value
+export FILTER_MATCH_MIN="0.85"	# alignment will be output if its ratio of number of matched bases to *read* length is higher than this value
+export MAX_LOCI_ALLOWED="1000"	# max number of loci anchors are allowed to map to
+export MULTIMAP_SCORE_RANGE="0"	# the score range below the maximum score for multimapping alignments
 
 	## HTSeq-Count
 
@@ -102,7 +113,7 @@ demultiplexing()
 		then
 			LOGFILE="$1_demultiplexing.log"
 			OUTFILE=$1_demultiplex.fastq
-		
+
 			if [ -s $LOGFILE ]
 			then
 				return
@@ -116,7 +127,7 @@ demultiplexing()
 					echo "run_demultiplexing cannot run correctly !"
 					exit 1
 				fi
-	
+
 				echo "End of demultiplexing."
 			fi
 		else
@@ -130,37 +141,36 @@ demultiplexing()
 fastqc_quality_control()
 	{
 		if [ -e $1 ]
-                then
-                        NB_FILE_IN_DIR_=$(ls -R $1 | wc -l)
+		then
+			NB_FILE_IN_DIR_=$(ls -R $1 | wc -l)
+			let NB_FILE_IN_DIR=$NB_FILE_IN_DIR-1
 
-                        let NB_FILE_IN_DIR=$NB_FILE_IN_DIR-1
+			if [ $NB_FILE_IN_DIR -gt 1 ]
+			then
+				return
+			fi
+		else
+			mkdir -p $1
 
-                        if [ $NB_FILE_IN_DIR -gt 1 ]
-                        then
-                                return
-                        fi
-                else
-                        mkdir -p $1
+			if [ $? -ne 0 ]
+			then
+				echo "$1 cannot be created !"
+				exit 1
+			fi
+				echo "Starting of FastQC :"
 
-                        if [ $? -ne 0 ]
-                        then
-                                echo "$1 cannot be created !"
-                                exit 1
-                        fi
-                                echo "Starting of FastQC :"
+				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/fastqc:0.11.3 bash -c "fastqc -o $1 $2"
 
-				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/fastqc:0.11.2 bash -c "fastqc -o $1 $2"
-
-                        if [ $? -ne 0 ]
-                        then
-                                echo "FastQC cannot run correctly !"
-                                exit 1
-                        fi
+				if [ $? -ne 0 ]
+				then
+					echo "FastQC cannot run correctly !"
+					exit 1
+				fi
 				echo "End of FastQC."
-                fi
+		fi
 	}
 
-export -f fastqc_quality_control 
+export -f fastqc_quality_control
 
 # We run FastQC to check our demultiplexing
 # This function will be renamed raw_quality_control_report()
@@ -171,13 +181,14 @@ raw_quality_report()
 
 		if [ $WORKING_ANSWER_DEMULTIPLEXING = YES ]
 		then
-			DIR_RAW_FASTQ_REPORT="$1_raw_fastqc_report"
+#			DIR_RAW_FASTQ_REPORT="$1_raw_fastqc_report"
 			INPUT_RAW_FASTQ="$1_demultiplex.fastq"
 		else
-                        INPUT_RAW_FASTQ="${1}.fastq"
+			INPUT_RAW_FASTQ="${1}.fastq"
 		fi
-			DIR_RAW_FASTQ_REPORT="$1_raw_fastqc_report"
-		
+
+		DIR_RAW_FASTQ_REPORT="$1_raw_fastqc_report"
+
 		if [ -s $INPUT_RAW_FASTQ ]
 		then
 			fastqc_quality_control $DIR_RAW_FASTQ_REPORT $INPUT_RAW_FASTQ
@@ -194,12 +205,13 @@ removeBadIQF()
 
 		if [ $WORKING_ANSWER_DEMULTIPLEXING = YES ]
 		then
-                        INPUT_FASTQ="$1_demultiplex.fastq"
+			INPUT_FASTQ="$1_demultiplex.fastq"
 		else
-                        INPUT_FASTQ="$1.fastq"
+			INPUT_FASTQ="$1.fastq"
 		fi
-			LOGFILE="$1_rmIQF.log"
-			RM_BADIQF_OUTPUT="$1_rmIQF.fastq"
+
+		LOGFILE="$1_rmIQF.log"
+		RM_BADIQF_OUTPUT="$1_rmIQF.fastq"
 
 		if [ -s $LOGFILE ] && [ -s $RM_BADIQF_OUTPUT ]
 		then
@@ -223,7 +235,7 @@ removeBadIQF()
 removeBadIQF_report()
 	{
 		RM_BADIQF_DIR="$1_rmIQF_report"
-                RM_IQF_INPUT="$1_rmIQF.fastq"
+		RM_IQF_INPUT="$1_rmIQF.fastq"
 
 		if [ -s $RM_IQF_INPUT ]
 		then
@@ -236,7 +248,6 @@ removeBadIQF_report()
 
 # Remove PCR duplicates --> % Amplification in log file
 removePCRduplicates()
-
 	{
 		WORKING_ANSWER_REMOVE_PCR_DUPLICATES=${ANSWER_REMOVE_PCR_DUPLICATES^^}
 
@@ -245,7 +256,7 @@ removePCRduplicates()
 			LOGFILE="$1_rmPCR.log"
 			RM_PCRDUP_OUTPUT="$1_rmPCR.fastq"
 			RM_PCRDUP_INPUT="$1_rmIQF.fastq"
-		
+
 			if [ -s $RM_PCRDUP_INPUT ]
 			then
 				if [ -s $RM_PCRDUP_OUTPUT ] && [ -s $LOGFILE ]
@@ -283,15 +294,15 @@ Index_Adapter_trimming()
 		if [ $WORKING_ANSWER_DEMULTIPLEXING = YES ]
 		then
 			INDEX_TRIM_OUTPUT="$1_TrimIndex.fastq"
-			
+
 			if [ $WORKING_ANSWER_REMOVE_PCR_DUPLICATES = YES ]
 			then
 				INDEX_TRIM_INPUT="$1_rmPCR.fastq"
 			else
 				INDEX_TRIM_INPUT="$1_rmIQF.fastq"
 			fi
-			
-			INDEX_LENGTH=$(expr length $2)			
+
+			INDEX_LENGTH=$(expr length $2)
 
 			LOGFILE="$1_TrimIndex.log"
 
@@ -299,16 +310,17 @@ Index_Adapter_trimming()
 			then
 				return
 			else
-		
+
 				echo "Index adapter trimming :"
 
-				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/cutadapt:1.7.1 bash -c "cutadapt -u $INDEX_LENGTH -o $INDEX_TRIM_OUTPUT $INDEX_TRIM_INPUT" > $LOGFILE && cat $LOGFILE
+				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/cutadapt:1.8.3 bash -c "cutadapt -u $INDEX_LENGTH -o $INDEX_TRIM_OUTPUT $INDEX_TRIM_INPUT" > $LOGFILE && cat $LOGFILE
+
 				if [ ! -s $INDEX_TRIM_OUTPUT ]
 				then
 					echo "Index adapter trimming cannot run correctly !"
 					exit 1
 				fi
-		
+
 				echo "End of index adapter trimming."
 			fi
 		else
@@ -343,17 +355,18 @@ ThreePrime_trimming()
 	{
 		WORKING_ANSWER_DEMULTIPLEXING=${ANSWER_DEMULTIPLEXING^^}
 		WORKING_ANSWER_REMOVE_PCR_DUPLICATES=${ANSWER_REMOVE_PCR_DUPLICATES^^}
+		WORKING_ANSWER_REMOVE_POLYN_READS=${ANSWER_REMOVE_POLYN_READS^^}
 
 		if [ $WORKING_ANSWER_DEMULTIPLEXING = YES ]
 		then
 			THREEPRIME_TRIM_INPUT="$1_TrimIndex.fastq"
 		else
-                        if [ $WORKING_ANSWER_REMOVE_PCR_DUPLICATES = YES ]
-                        then
-                                THREEPRIME_TRIM_INPUT="$1_rmPCR.fastq"
-                        else
-                                THREEPRIME_TRIM_INPUT="$1_rmIQF.fastq"
-                        fi
+			if [ $WORKING_ANSWER_REMOVE_PCR_DUPLICATES = YES ]
+			then
+				THREEPRIME_TRIM_INPUT="$1_rmPCR.fastq"
+			else
+				THREEPRIME_TRIM_INPUT="$1_rmIQF.fastq"
+			fi
 		fi
 
 		THREEPRIME_TRIM_OUTPUT="$1_ThreePrime_Trim.fastq"
@@ -365,7 +378,12 @@ ThreePrime_trimming()
 		else
 			echo "3' trimming :"
 
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/cutadapt:1.7.1 bash -c "cutadapt -a $2 -o $THREEPRIME_TRIM_OUTPUT $THREEPRIME_TRIM_INPUT > $LOGFILE && cat $LOGFILE"
+			if [ $WORKING_ANSWER_REMOVE_POLYN_READS = YES ]
+			then
+				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/cutadapt:1.8.3 bash -c "cutadapt -a $2 --discard-untrimmed --max-n $FILTER_MAX_N -o $THREEPRIME_TRIM_OUTPUT $THREEPRIME_TRIM_INPUT > $LOGFILE && cat $LOGFILE"
+			else
+				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/cutadapt:1.8.3 bash -c "cutadapt -a $2 --discard-untrimmed -o $THREEPRIME_TRIM_OUTPUT $THREEPRIME_TRIM_INPUT > $LOGFILE && cat $LOGFILE"
+			fi
 
 			if [ $? -ne 0 ]
 			then
@@ -396,53 +414,53 @@ ThreePrime_trimming_report()
 Size_Selection()
 	{
 		WORKING_ANSWER_DEMULTIPLEXING=${ANSWER_DEMULTIPLEXING^^}
-                WORKING_ANSWER_REMOVE_PCR_DUPLICATES=${ANSWER_REMOVE_PCR_DUPLICATES^^}
+		WORKING_ANSWER_REMOVE_PCR_DUPLICATES=${ANSWER_REMOVE_PCR_DUPLICATES^^}
 
-                if [ $WORKING_ANSWER_DEMULTIPLEXING = YES ]
-                then
+		if [ $WORKING_ANSWER_DEMULTIPLEXING = YES ]
+		then
 			THREEPRIME_TRIM_INPUT="$1_ThreePrime_Trim.fastq"
-                        SIZE_SELECT_OUTPUT="$1_SizeSelection.fastq"
-                        LOGFILE="$1_SizeSelection.log"
-                else
+			SIZE_SELECT_OUTPUT="$1_SizeSelection.fastq"
+			LOGFILE="$1_SizeSelection.log"
+		else
 			BASENAME=$(basename $1 .f*q)
-                        THREEPRIME_TRIM_INPUT="${BASENAME}_ThreePrime_Trim.fastq"
-                        SIZE_SELECT_OUTPUT="${BASENAME}_SizeSelection.fastq"
-                        LOGFILE="${BASENAME}_SizeSelection.log"
-                fi
+			THREEPRIME_TRIM_INPUT="${BASENAME}_ThreePrime_Trim.fastq"
+			SIZE_SELECT_OUTPUT="${BASENAME}_SizeSelection.fastq"
+			LOGFILE="${BASENAME}_SizeSelection.log"
+		fi
 
-                if [ -s $THREEPRIME_TRIM_OUTPUT ] && [ -s $LOGFILE ]
-                then
-                        return
-                else
-                        echo "Size selection :"
+		if [ -s $THREEPRIME_TRIM_OUTPUT ] && [ -s $LOGFILE ]
+		then
+			return
+		else
+			echo "Size selection :"
 
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/cutadapt:1.7.1 bash -c "cutadapt -m $MIN_READ_LENGTH -o $SIZE_SELECT_OUTPUT $THREEPRIME_TRIM_INPUT > $LOGFILE && cat $LOGFILE"
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/cutadapt:1.8.3 bash -c "cutadapt -m $MIN_READ_LENGTH -M $MAX_READ_LENGTH -o $SIZE_SELECT_OUTPUT $THREEPRIME_TRIM_INPUT > $LOGFILE && cat $LOGFILE"
 
-                        if [ $? -ne 0 ]
-                        then
-                                echo "Cutadapt cannot run correctly !"
-                                exit 1
-                        fi
+			if [ $? -ne 0 ]
+			then
+				echo "Cutadapt cannot run correctly !"
+				exit 1
+			fi
 
-                        echo "End of Cutadapt."
-                fi
+			echo "End of Cutadapt."
+		fi
 	}
 
 # We shake the size selection
 
 Size_Selection_report()
-        {
+	{
 		DIR_SIZE_SELECT_FASTQC="$1_Size_Selection_report"
 		SIZE_SELECT_INPUT="$1_SizeSelection.fastq"
 
 		if [ -s $SIZE_SELECT_INPUT ]
 		then
-	               fastqc_quality_control $DIR_SIZE_SELECT_FASTQC $SIZE_SELECT_INPUT
+			fastqc_quality_control $DIR_SIZE_SELECT_FASTQC $SIZE_SELECT_INPUT
 		else
 			echo "$SIZE_SELECT_INPUT doesn't exist"
 			exit 1
 		fi
-        }
+	}
 
 # We run Bowtie 1 to align reads to rRNA sequences : we get unmapped reads for next steps and mapped reads to have length distribution (Python script using matplotlib)
 
@@ -455,15 +473,15 @@ align_To_R_RNA()
 			if [ $WORKING_ANSWER_DEMULTIPLEXING = YES ]
 			then
 				UNMAPPED_RNA_FASTQ_FILE="${sample}_no_rRNA.fastq"
-	                        MAPPED_RNA_SAM_FILE="${sample}_rRNA_mapped.sam"
-        	                LOGFILE_BOWTIE="${sample}_rRNA_mapping.log"
-                	        INPUT_RNA_MAPPING="${sample}_SizeSelection.fastq"
+				MAPPED_RNA_SAM_FILE="${sample}_rRNA_mapped.sam"
+				LOGFILE_BOWTIE="${sample}_rRNA_mapping.log"
+				INPUT_RNA_MAPPING="${sample}_SizeSelection.fastq"
 			else
 				BASENAME=$(basename $sample .fastq)
- 	              	        UNMAPPED_RNA_FASTQ_FILE="${BASENAME}_no_rRNA.fastq"
-  	                     	MAPPED_RNA_SAM_FILE="${BASENAME}_rRNA_mapped.sam"
-	                        LOGFILE_BOWTIE="${BASENAME}_rRNA_mapping.log"
-    	   	                INPUT_RNA_MAPPING="${BASENAME}_SizeSelection.fastq"
+				UNMAPPED_RNA_FASTQ_FILE="${BASENAME}_no_rRNA.fastq"
+				MAPPED_RNA_SAM_FILE="${BASENAME}_rRNA_mapped.sam"
+				LOGFILE_BOWTIE="${BASENAME}_rRNA_mapping.log"
+				INPUT_RNA_MAPPING="${BASENAME}_SizeSelection.fastq"
 			fi
 
 			rRNA_INDEX_BASENAME=$(echo $(basename ${PATH_TO_rRNA_INDEX}/*.1.ebwt | cut -f1 -d'.'))
@@ -481,7 +499,7 @@ align_To_R_RNA()
 					echo "Bowtie1 cannot run correctly !"
 					exit 1
 				fi
-	
+
 				echo "End of Bowtie1."
 			fi
 		done
@@ -489,18 +507,18 @@ align_To_R_RNA()
 
 # We run FASTQC on unmapped fastq
 Unmmaped_to_rRNA_report()
-        {
+	{
 		DIR_UNMAPPED_RRNA_FASTQC="$1_no_rRNA_report"
 		UNMAPPED_RRNA_INPUT="$1_no_rRNA.fastq"
-		
+
 		if [ -s $UNMAPPED_RRNA_INPUT ]
 		then
-	                fastqc_quality_control $DIR_UNMAPPED_RRNA_FASTQC $UNMAPPED_RRNA_INPUT
+			fastqc_quality_control $DIR_UNMAPPED_RRNA_FASTQC $UNMAPPED_RRNA_INPUT
 		else
 			echo "$UNMAPPED_RRNA_INPUT doesn't exist"
 			exit 1
 		fi
-        }
+	}
 
 # We run the Python library matplotlib
 
@@ -522,7 +540,7 @@ mapped_to_R_RNA_distrib_length()
 				echo "Cannot computing mapped to rRNA reads length distribution !"
 				exit 1
 			fi
-	
+
 			echo "End of computing mapped to rRNA reads length distribution."
 		fi
 	}
@@ -538,12 +556,12 @@ align_to_ref_genome()
 			if [ $WORKING_ANSWER_DEMULTIPLEXING = YES ]
 			then
 				DIR_ALIGN_STAR="${sample}_align_star/"
-	                        INPUT_ALIGN_GENOME="${sample}_no_rRNA.fastq"
+				INPUT_ALIGN_GENOME="${sample}_no_rRNA.fastq"
 			else
 				BASENAME=$(basename $sample .fastq)
-                       		DIR_ALIGN_STAR="${BASENAME}_align_star/"
-	                        INPUT_ALIGN_GENOME="${BASENAME}_no_rRNA.fastq"
-			fi	
+				DIR_ALIGN_STAR="${BASENAME}_align_star/"
+				INPUT_ALIGN_GENOME="${BASENAME}_no_rRNA.fastq"
+			fi
 
 			if [ -e $DIR_ALIGN_STAR ]
 			then
@@ -555,14 +573,14 @@ align_to_ref_genome()
 				mkdir -p $DIR_ALIGN_STAR
 
 				if [ $? -ne 0 ]
-	                        then
-        	                        echo "Cannot create the directory !"
-                	                exit 1
-                        	fi
-			
+				then
+					echo "Cannot create the directory !"
+					exit 1
+				fi
+
 				echo "Starting of STAR :"
-			
-				docker run --rm -u $(id -u):$(id -g) -v $(pwd):/home -v $PATH_TO_GENOME_INDEX:/root -w /home genomicpariscentre/star:2.4.0k bash -c "STAR --runThreadN $(nproc) --genomeDir /root --readFilesIn $INPUT_ALIGN_GENOME --outFileNamePrefix $DIR_ALIGN_STAR"
+
+				docker run --rm -u $(id -u):$(id -g) -v $(pwd):/home -v $PATH_TO_GENOME_INDEX:/root -w /home genomicpariscentre/star:2.5.1b bash -c "STAR --runThreadN $(nproc) --genomeDir /root --readFilesIn $INPUT_ALIGN_GENOME --outFileNamePrefix $DIR_ALIGN_STAR --outSAMunmapped Within --outFilterMismatchNoverLmax $MAX_ALLOWED_MISMATCHES --quantMode TranscriptomeSAM --seedSearchStartLmax $SEED_SEARCH_POINT --outFilterScoreMinOverLread $FILTER_SCORE_MIN --outFilterMatchNminOverLread $FILTER_MATCH_MIN --winAnchorMultimapNmax $MAX_LOCI_ALLOWED --outFilterMultimapScoreRange $MULTIMAP_SCORE_RANGE"
 
 				if [ ! -s "${DIR_ALIGN_STAR}Aligned.out.sam" ]
 				then
@@ -580,7 +598,7 @@ align_to_ref_genome()
 samFiltering()
 	{
 		WORKING_ANSWER_KEEP_MULTIREAD=${ANSWER_KEEP_MULTIREAD^^}
-	
+
 		SAM_INPUT="$1_align_star/Aligned.out.sam"
 		FILTERED_SAM_UNIQUE_OUTPUT="$1_align_filtered.sam"
 		FILTERED_SAM_MULTI_OUTPUT="$1_align_multi.sam"
@@ -594,7 +612,7 @@ samFiltering()
 			else
 				echo "Starting of SAM file filtering :"
 
-				if [ "$WORKING_ANSWER_KEEP_MULTIREAD" = YES ]
+				if [ $WORKING_ANSWER_KEEP_MULTIREAD = YES ]
 				then
 					grep -v '^@' $SAM_INPUT | awk '$2 != 4 {print $0}' | sort -k 1,1 | $PYTHON_SCRIPT_SAM_FILTERING -i $SAM_INPUT -o $FILTERED_SAM_UNIQUE_OUTPUT -m $FILTERED_SAM_MULTI_OUTPUT > $LOGFILE && cat $LOGFILE
 				else
@@ -614,49 +632,84 @@ samFiltering()
 		fi
 	}
 
-# We compute the reads length distribution after alignment to the reference genome and the SAM fil filtering
+# We compute the reads length distribution after alignment to the reference genome and the SAM file filtering (uniquely mapped only)
 
 mapped_to_genome_distrib_length()
 	{
 		SAM_FILTERED_INPUT="$1_align_filtered.sam"
-		DISTR_LGT_PNG="$1_mapped_to_genome_read_length_distribution.png"
+		DISTR_LGT_PNG="$1_uniquely_mapped_to_genome_read_length_distribution.png"
 
-                if [ -s $DISTR_LGT_PNG ]
-                then
-                        return
-                else
-                        echo "Computing mapped to genome reads length distribution :"
+		if [ -s $DISTR_LGT_PNG ]
+		then
+			return
+		else
+			echo "Computing uniquely mapped to genome reads length distribution :"
 
 			grep -v '^@' $SAM_FILTERED_INPUT | awk '{print length($10)}' | $PYTHON_SCRIPT_READ_LENGTH_DISTRIBUTION -i $SAM_FILTERED_INPUT -o $DISTR_LGT_PNG
 
-                        if [ ! -s $DISTR_LGT_PNG ]
-                        then
-                                echo "Cannot computing mapped to genome reads length distribution !"
-                                exit 1
-                        fi
+			if [ ! -s $DISTR_LGT_PNG ]
+			then
+				echo "Cannot compute uniquely mapped to genome reads length distribution !"
+				exit 1
+			fi
 
-                        echo "End of computing mapped to genome reads length distribution."
-                fi
+			echo "End of computing uniquely mapped to genome reads length distribution."
+		fi
 	}
 
-# We convert the filtered SAM file into a BAM file
+# We compute the multi-reads length distribution after alignment to reference genome
+
+multimapped_to_genome_distrib_length()
+	{
+		WORKING_ANSWER_KEEP_MULTIREAD=${ANSWER_KEEP_MULTIREAD^^}
+
+		if [ $WORKING_ANSWER_KEEP_MULTIREAD = YES ]
+		then
+			SAM_MULTIREAD_INPUT="$1_align_multi.sam"
+			DISTR_LGT_PNG="$1_multimapped_to_genome_read_length_distribution.png"
+
+			if [ -s $DISTR_LGT_PNG ]
+			then
+				return
+			else
+				echo "Computing multi-mapped to genome reads length distribution :"
+
+				grep -v '^@' $SAM_MULTIREAD_INPUT | awk '{print length($10)}' | $PYTHON_SCRIPT_READ_LENGTH_DISTRIBUTION -i $SAM_MULTIREAD_INPUT -o $DISTR_LGT_PNG
+
+				if [ ! -s $DISTR_LGT_PNG ]
+				then
+					echo "Cannot compute multi-mapped to genome reads length distribution !"
+					exit 1
+				fi
+			fi
+
+			echo "End of computing multi-mapped to genome reads length distribution."
+		else
+			return
+		fi
+	}
+
+# We convert the filtered SAM file into a sorted BAM file which is indexed in BAI
 
 sam_to_bam()
 	{
-		FILTERED_BAM="$1_align_filtered.bam"
+		FILTERED_SORTED_ALIGNMENT="$1_align_filtered.sorted"	# Sorted alignment basename for BAM & BAI files
 		FILTERED_SAM="$1_align_filtered.sam"
 
 		if [ -s $FILTERED_SAM ]
 		then
-			if [ -s $FILTERED_BAM ]
+			if [ -s "${FILTERED_SORTED_ALIGNMENT}.bam" ]
 			then
 				return
 			else
 				echo "Starting of Samtools"
-			
-				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/samtools:0.1.19 bash -c "samtools view -Sb $FILTERED_SAM > $FILTERED_BAM"
 
-				if [ ! -s $FILTERED_BAM ]
+				# SAM to BAM conversion + sorting of BAM file
+				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/samtools:0.1.19 bash -c "samtools view -Sb $FILTERED_SAM | samtools sort - $FILTERED_SORTED_ALIGNMENT"
+				# Index BAI
+				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/samtools:0.1.19 bash -c "samtools index "${FILTERED_SORTED_ALIGNMENT}.bam" "${FILTERED_SORTED_ALIGNMENT}.bai""
+
+				if [ ! -s "${FILTERED_SORTED_ALIGNMENT}.bam" ]
 				then
 					echo "Samtools cannot run correctly !"
 					exit 1
@@ -673,7 +726,7 @@ sam_to_bam()
 
 # We get longest transcript of each gene for CDS annotations from Ensembl 75 GTF
 get_longest_transcripts_from_annotations()
-	{		
+	{
 		INPUT_ANNOTATION=$(basename $PATH_TO_ANNOTATION_FILE)
 		DIRNAME_ANNOTATIONS=$(dirname $PATH_TO_ANNOTATION_FILE)
 
@@ -702,16 +755,16 @@ htseq_count()
 	{
 		WORKING_ANSWER_RNASEQ_COUNTING=${ANSWER_RNASEQ_COUNTING^^}
 
-		FILTERED_BAM="$1_align_filtered.bam"
+		FILTERED_SORTED_BAM="$1_align_filtered.sorted.bam"
 		HTSEQCOUNT_FILE="$1_htseq.txt"
 		HTSEQCOUNT_FILE_ANADIF_BABEL="$1_RPcounts.txt"
 
 		ANNOTATIONS_FILE=$(basename $PATH_TO_ANNOTATION_FILE)
-                ANNOTATION_PREFIX=${ANNOTATIONS_FILE:0:-4}
+		ANNOTATION_PREFIX=${ANNOTATIONS_FILE:0:-4}
 
-                CDS_LONGEST_TRANSCRIPTS_ANNOTATIONS="${ANNOTATION_PREFIX}_only_cds_longest_transcripts.gtf"
-		
-		if [ -s $FILTERED_BAM ] && [ -s $CDS_LONGEST_TRANSCRIPTS_ANNOTATIONS ]
+		CDS_LONGEST_TRANSCRIPTS_ANNOTATIONS="${ANNOTATION_PREFIX}_only_cds_longest_transcripts.gtf"
+
+		if [ -s $FILTERED_SORTED_BAM ] && [ -s $CDS_LONGEST_TRANSCRIPTS_ANNOTATIONS ]
 		then
 			if [ -s $HTSEQCOUNT_FILE ] || [ -s DifferentialAnalysis/$HTSEQCOUNT_FILE ]
 			then
@@ -719,7 +772,7 @@ htseq_count()
 			else
 				echo "Starting of HTSeq-count :"
 
-				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/htseq bash -c "htseq-count --mode $MODE_FOR_MULTIPLE_FEATURES_READS --type $FEATURE_TYPE --idattr $IDATTR --stranded $STRANDED --format $FILETYPE $FILTERED_BAM $CDS_LONGEST_TRANSCRIPTS_ANNOTATIONS > $HTSEQCOUNT_FILE"
+				docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR:/home -w /home genomicpariscentre/htseq:0.6.1p1 bash -c "htseq-count --mode $MODE_FOR_MULTIPLE_FEATURES_READS --type $FEATURE_TYPE --idattr $IDATTR --stranded $STRANDED --format $FILETYPE $FILTERED_SORTED_BAM $CDS_LONGEST_TRANSCRIPTS_ANNOTATIONS > $HTSEQCOUNT_FILE"
 
 				mkdir -p DifferentialAnalysis
 
@@ -743,11 +796,11 @@ htseq_count()
 					echo "HTSeq-Count cannot run correctly !"
 					exit 1
 				fi
-	
+
 				echo "End of HTSeq-Count."
 			fi
 		else
-			echo "You need a filtered BAM file to launch this step !"
+			echo "You need a filtered-sorted BAM file to launch this step !"
 			exit 1
 		fi
 	}
@@ -765,9 +818,9 @@ build_rnaseq_ribopro_counting_tables()
 		# If user has RNA-seq countings, we build RNAseq and Ribosome Profiling counting tables
 		if [ $WORKING_ANSWER_RNASEQ_COUNTING = YES ]
 		then
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RNASEQ}" ${SAMPLES[@]}
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RNASEQ}" ${SAMPLES[@]}
 
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RP}" ${SAMPLES[@]}
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_BUILD_COUNTING_TABLE_RP}" ${SAMPLES[@]}
 		else
 			return
 		fi
@@ -782,9 +835,9 @@ anadif_babel()
 		# If user has RNA-seq counting, we use Babel R package
 		if [ $WORKING_ANSWER_RNASEQ_COUNTING = YES ]
 		then
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_BABEL}" ${CONDITION_ARRAY[@]}
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_BABEL}" ${CONDITION_ARRAY[@]}
 
-			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_PERMT_TEST_BABEL}" ${CONDITION_ARRAY[@]}
+			docker run --rm -u $(id -u):$(id -g) -v $TMPDIR:/tmp -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/babel:0.2-6 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_PERMT_TEST_BABEL}" ${CONDITION_ARRAY[@]}
 		else
 			return
 		fi
@@ -799,26 +852,26 @@ anadif_sartools()
 		if [ ! $WORKING_ANSWER_RNASEQ_COUNTING = YES ]
 		then
 			if [ -e DifferentialAnalysis ]
-                	then
-                        	WORKDIR_ANADIFF=$(readlink -f DifferentialAnalysis)
-                	fi
+			then
+				WORKDIR_ANADIFF=$(readlink -f DifferentialAnalysis)
+			fi
 
 			PARAM=(/home $1 $2 target.txt /home $3)
 			WORK_PARAM=$(echo ${PARAM[*]})
 			PARAMETERS=$(echo $WORK_PARAM)
 
 			# EdgeR is launch by default if not specified (because Babel uses edgeR)
-                        if [ $WORKING_DIFFERENTIAL_ANALYSIS_PACKAGE = DESEQ2 ]
-	                then
-				docker run --rm -u $(id -u):$(id -g) -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/sartools Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_DESEQ2}" $PARAMETERS
+			if [ $WORKING_DIFFERENTIAL_ANALYSIS_PACKAGE = DESEQ2 ]
+			then
+				docker run --rm -u $(id -u):$(id -g) -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/sartools:1.1.0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_DESEQ2}" $PARAMETERS
 			else
-				docker run --rm -u $(id -u):$(id -g) -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/sartools Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_EDGER}" $PARAMETERS
+				docker run --rm -u $(id -u):$(id -g) -v $WORKDIR_ANADIFF:/home -w /home genomicpariscentre/sartools:1.1.0 Rscript "${R_SCRIPTS_PATH}/${R_SCRIPT_ANADIFF_SARTOOLS_EDGER}" $PARAMETERS
 			fi
 		else
 			return
 		fi
 	}
-	
+
 
 export -f demultiplexing
 export -f raw_quality_report
@@ -837,6 +890,7 @@ export -f mapped_to_R_RNA_distrib_length
 export -f align_to_ref_genome
 export -f samFiltering
 export -f mapped_to_genome_distrib_length
+export -f multimapped_to_genome_distrib_length
 export -f sam_to_bam
 export -f get_longest_transcripts_from_annotations
 export -f htseq_count
@@ -911,6 +965,10 @@ parallel samFiltering {.} ::: $WORKING_SAMPLE_ARRAY
 wait
 
 parallel mapped_to_genome_distrib_length {.} ::: $WORKING_SAMPLE_ARRAY
+
+wait
+
+parallel multimapped_to_genome_distrib_length {.} ::: $WORKING_SAMPLE_ARRAY
 
 wait
 

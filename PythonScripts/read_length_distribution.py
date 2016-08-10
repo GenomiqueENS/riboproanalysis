@@ -9,31 +9,34 @@ import sys
 import os
 
 if __name__=='__main__':
-	parser = argparse.ArgumentParser()      
-        parser.add_argument("-i", "--input", required = True, metavar = "input.sam", help = "Alignment on SAM format as input")
-        parser.add_argument("-o", "--output", required = True, metavar = "output.png", help = "Read length distribution picture as output")
-        args = parser.parse_args()
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-i", "--input", required = True, metavar = "input.sam", help = "Alignment on SAM format as input")
+	parser.add_argument("-o", "--output", required = True, metavar = "output.png", help = "Read length distribution picture as output")
+	args = parser.parse_args()
 
 	if os.path.exists(args.input):
-	        inPut = args.input
+		inPut = args.input
 	else:
 		print "No such file : " + args.input
 		sys.exit(1)
 
-        graphOutputName = args.output
+	graphOutputName = args.output
 
 	reads_lgts = []
 	entree = sys.stdin
 
-        for line in entree:
-                reads_lgts.append(int(line.strip()))
+	for line in entree:
+		reads_lgts.append(int(line.strip()))
 
-        plt.hist(reads_lgts, histtype='bar', facecolor='b')
+	L = max(reads_lgts) - min(reads_lgts)
+	plt.hist(reads_lgts, histtype='bar', facecolor='b', bins = L)
 
 	title = 'Reads length distribution from ' + inPut
+	Xlabel = 'Length' + '\n' + 'Bins = ' + str(L)
 
 	plt.title(title)
-	plt.xlabel('Length')
+	plt.xlabel(Xlabel)
 	plt.ylabel('Number of reads')
 	plt.grid(True)
-        plt.savefig(graphOutputName)
+	plt.xlim(min(reads_lgts), max(reads_lgts) + 5)
+	plt.savefig(graphOutputName)
