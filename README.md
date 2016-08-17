@@ -1,7 +1,7 @@
 RiboProAnalysis
 ===============
 
-**RiboProAnalysis** is a pipeline for Ribosome Profiling analysis for all eukaryotic genome from Ensembl. 
+**RiboProAnalysis** is a pipeline for Ribosome Profiling analysis for all eukaryotic genome from Ensembl 75+. 
 It performs pre-processing steps (quality control, filtering, trimming and size selection), reads mapping to rRNA and reference genome, counting on CDS for each gene and
 differential analysis from raw Ribosome Profiling data.
 
@@ -27,8 +27,8 @@ STAR --runMode genomeGenerate --genomeDir /path/to/genome/index --genomeFastaFil
 Create a tmp/ directory in your working directory with command mkdir tmp/
  
 Run RiboProAnalysis container with following command in the working directory :
-````**docker run --rm --privileged --name ribopro -v /var/run/docker.sock:/var/run/docker.sock -v /etc/passwd:/etc/passwd -v $(pwd):/home -w /home** \
--v /path/to/rRNA/index:**/rRNAindexdirectory** -v /path/to/genome/index:**/genomeindexdirectory** -v /path/to/directory/containig/GTF/Ensembl75/annotations:**/root -v $(pwd)/tmp:/tmp **\
+````**docker run --rm --privileged --name ribopro -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/home -w /home** \
+-v /path/to/rRNA/index:**/rRNAindexdirectory** -v /path/to/genome/index:**/genomeindexdirectory** -v /path/to/directory/containig/GTF/Ensembl/annotations:**/root -v $(pwd)/tmp:/tmp **\
 **genomicpariscentre/riboproanalysis bash -c "riboproanalysisDocker.sh** My_configuration_file.conf"
 ```
 
@@ -59,7 +59,7 @@ riboproanalysis.sh MyConfigurationFile.conf
 | CONDITION_ARRAY                    | Array containig condition name of each sample respecting the same order                                                               | (Cond_Samp1 Cond_Samp2 Cond_Samp3)                                   | Mandatory with Babel                      |
 | AUTHOR                             | Author's name                                                                                                                         | UserName                                                             | Mandatory for SARTools                    |
 | REFERENCE_CONDITION                | Reference condition for the statistical analysis of SARTools                                                                          | WT                                                                   | Mandatory for SARTools                    |
-
+| CHECK_DOCKER_IMAGES				 | Check the tags of Docker images																										 | YES / NO																| NO
 
 ##Installation :
 This software could be launched from a Docker container launcheing Docker containers itself, or from a Bash script launchine Docker containers.
