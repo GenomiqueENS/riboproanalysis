@@ -19,6 +19,10 @@ import time
 #---------------------------------------------------------------------------------------
 def generate_regex(adapt) :
 	
+	if adapt == ""
+		print "Give your index adapter sequence."
+		sys.exit(1)
+
 	regex = "^"	# à modifier si l'adapt n'est pas au début
 	print "WARNING : read must BEGIN with the adapter"
 	for char in adapt :

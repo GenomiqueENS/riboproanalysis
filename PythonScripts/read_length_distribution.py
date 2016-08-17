@@ -29,6 +29,10 @@ if __name__=='__main__':
 		reads_lgts.append(int(line.strip()))
 
 	L = max(reads_lgts) - min(reads_lgts)
+
+	if L == 0:
+		L = 1
+
 	plt.hist(reads_lgts, histtype='bar', facecolor='b', bins = L)
 
 	title = 'Reads length distribution from ' + inPut

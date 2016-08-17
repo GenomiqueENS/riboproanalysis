@@ -97,10 +97,10 @@ if __name__=='__main__':
 	## output some stats to stdout
 	perct = float(nbUniq)/float(nbLine) * 100
 	perct = "{0:.2f}".format(perct)
-	print "TOTAL COUNT : "+str(nbUniq)+" uniquely mapped reads from "+str(nbLine)+" total ("+str(perct)+"%)."
-	print "INFO : unique reads have been written to "+str(outPutSamUniq)+" in SAM format."
+	print "TOTAL COUNT : "+str(nbUniq)+" uniquely mapped alignments from "+str(nbLine)+" total ("+str(perct)+"%)."
+	print "INFO : unique alignments have been written to "+str(outPutSamUniq)+" in SAM format."
 
 	if writeMulti:
-		print "INFO : multi-reads have been written to "+str(outPutMulti)+" in SAM format."
+		print "INFO : multi-mapped reads alignments have been written to "+str(outPutMulti)+" in SAM format."
 
 	print "DATE OF THE END OF THE STEP : " + str(time.strftime("%Y-%m-%d %H:%M:%S"))
