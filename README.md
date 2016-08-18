@@ -67,15 +67,15 @@ This software could be launched from a Docker container launcheing Docker contai
 You should :
 * Install Docker on your computer
 * Pull following docker images from the Genomic Paris Centre Docker public repository : 
-	* genomicpariscentre/fastqc:0.11.3
+	* genomicpariscentre/fastqc:0.11.5
 	* genomicpariscentre/cutadapt:1.8.3
 	* genomicpariscentre/bowtie1:1.1.1
 	* genomicpariscentre/star:2.5.1b
 	* genomicpariscentre/gff3-ptools:0.4.0
 	* genomicpariscentre/samtools:0.1.19
 	* genomicpariscentre/htseq:0.6.1p1
-	* genomicpariscentre/babel:0.2-6
-	* genomicpariscentre/sartools:1.1.0
+	* genomicpariscentre/babel:0.3-0
+	* genomicpariscentre/sartools:1.3.2
 
 * Pull RiboProAnalysis image
 
